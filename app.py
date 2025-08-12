@@ -43,9 +43,15 @@ if video_file is not None:
     )
 
     cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0 or fps is None:
+        fps = 25  # default FPS if detection fails
+
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    if width == 0 or height == 0:
+        st.error("Could not read video dimensions. Please upload a valid video.")
+        st.stop()
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
@@ -75,27 +81,24 @@ if video_file is not None:
 
                     # Different colors for different labels
                     color = (0, 0, 255) if label == "garbage_throw" else (0, 255, 0)
-
                     cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(
                         annotated_frame, f"{label} ({conf:.2f})",
                         (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2
                     )
-
             out.write(annotated_frame)
             stframe.image(annotated_frame, channels="BGR", use_container_width=True)
-
             if alert_triggered:
                 st.warning("🚨 Garbage detected!")
         else:
-            # If skipping frame, just write the unprocessed frame
             out.write(frame)
-
         frame_count += 1
-
     cap.release()
     out.release()
+    cv2.destroyAllWindows()
+    import time
+    time.sleep(0.5)
 
     with open(output_path, "rb") as f:
         st.download_button(
